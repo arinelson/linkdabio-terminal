@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Cyber Terminal Access</title>
+    <meta name="description" content="Hub de conexões e portfólio de serviços de tecnologia com uma estética cyberpunk.">
+
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self'; 
+        script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; 
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data:;
+        connect-src 'self' https://fonts.googleapis.com;">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- OTIMIZAÇÃO: Biblioteca de áudio Tone.js, carregada de forma assíncrona -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js" async></script>
+
+    <style>
+        /* CSS inalterado */
+        :root {
+            --terminal-bg: #0a0a12;
+            --terminal-green: #0f0;
+            --terminal-cyan: #0ff;
+            --terminal-purple: #b19cd9;
+            --terminal-red: #f44;
+            --terminal-glow: rgba(0, 255, 0, 0.7);
+            --text-color: #e0e0e0;
+            --text-shadow: 0 0 8px var(--terminal-glow);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Inconsolata', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            perspective: 1000px;
+        }
+
+        .matrix-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.15;
+        }
+
+        .terminal-container {
+            position: relative;
+            width: 90%;
+            max-width: 600px;
+            height: 85vh;
+            max-height: 800px;
+            background: var(--terminal-bg);
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.5),
+                        inset 0 0 10px rgba(0, 255, 0, 0.2);
+            overflow: hidden;
+            border: 1px solid var(--terminal-green);
+            transform-style: preserve-3d;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotateX(10deg) rotateY(5deg);
+            }
+            50% {
+                transform: translateY(-20px) rotateX(5deg) rotateY(10deg);
+            }
+        }
+
+        .terminal-header {
+            background: linear-gradient(to right, #0a0a0a, #111);
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--terminal-green);
+            font-family: 'Share Tech Mono', monospace;
+            border-bottom: 1px solid var(--terminal-green);
+            box-shadow: 0 2px 15px rgba(0, 255, 0, 0.3);
+        }
+
+        .terminal-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .terminal-button.red { background: #ff5f56; }
+        .terminal-button.yellow { background: #ffbd2e; }
+        .terminal-button.green { background: #27c93f; }
+
+        .terminal-body {
+            padding: 20px;
+            height: calc(100% - 40px);
+            overflow-y: auto;
+            color: var(--text-color);
+            text-shadow: var(--text-shadow);
+            line-height: 1.6;
+        }
+
+        .typing-text {
+            white-space: pre-wrap;
+            font-size: 1.1rem;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .menu-container {
+            margin-top: 25px;
+            animation: fadeIn 1s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .accordion-trigger {
+            background-color: transparent;
+            border: 1px solid var(--terminal-green);
+            color: var(--terminal-green);
+            padding: 14px;
+            width: 100%;
+            text-align: left;
+            text-decoration: none;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+        }
+        
+        .accordion-trigger:first-child {
+            margin-top: 0;
+        }
+        
+        .accordion-trigger.active,
+        .accordion-trigger:hover {
+            background-color: rgba(0, 255, 0, 0.1);
+            color: var(--terminal-cyan);
+            border-color: var(--terminal-cyan);
+            text-shadow: 0 0 10px var(--terminal-cyan);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .accordion-trigger::after {
+            content: '[+]';
+            color: var(--terminal-green);
+            margin-left: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .accordion-trigger.active::after {
+            content: '[-]';
+            color: var(--terminal-cyan);
+        }
+
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+            background: rgba(10, 10, 18, 0.8);
+            padding-left: 20px;
+            border-left: 1px solid var(--terminal-green);
+            border-right: 1px solid var(--terminal-green);
+            border-bottom: 1px solid var(--terminal-green);
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+        }
+
+        .submenu a, .submenu-item {
+            display: block;
+            text-decoration: none;
+            padding: 12px 15px;
+            transition: all 0.2s ease;
+            font-family: 'Inconsolata', monospace;
+            border-left: 3px solid transparent;
+        }
+
+        .submenu p {
+            padding: 15px;
+            color: var(--text-color);
+        }
+
+        .link-github    { color: #e0e0e0; }
+        .link-linkedin  { color: #0A66C2; }
+        .link-instagram { color: #E1306C; }
+        .link-youtube   { color: #FF0000; }
+        .link-threads   { color: #f0f0f0; }
+        .link-facebook  { color: #1877F2; }
+        
+        .submenu a:hover {
+            transform: translateX(5px);
+        }
+
+        .link-github:hover    { background-color: rgba(224, 224, 224, 0.1); border-left-color: #e0e0e0; }
+        .link-linkedin:hover  { background-color: rgba(10, 102, 194, 0.15); border-left-color: #0A66C2;}
+        .link-instagram:hover { background-color: rgba(225, 48, 108, 0.15); border-left-color: #E1306C;}
+        .link-youtube:hover   { background-color: rgba(255, 0, 0, 0.15); border-left-color: #FF0000; }
+        .link-threads:hover   { background-color: rgba(240, 240, 240, 0.15); border-left-color: #f0f0f0; }
+        .link-facebook:hover  { background-color: rgba(24, 119, 242, 0.15); border-left-color: #1877F2;}
+        .submenu-item { color: var(--terminal-purple); }
+        .submenu-item:hover { background-color: rgba(177, 156, 217, 0.15); border-left-color: var(--terminal-purple); }
+        
+        .button-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 10px;
+            fill: currentColor;
+            vertical-align: middle;
+        }
+
+        .form-container {
+            padding: 15px;
+            border-top: 1px dashed var(--terminal-purple);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-container label {
+            display: block;
+            color: var(--terminal-purple);
+            margin-bottom: 5px;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--terminal-green);
+            color: var(--terminal-green);
+            padding: 10px;
+            font-family: 'Inconsolata', monospace;
+            font-size: 1rem;
+            caret-color: var(--terminal-green);
+        }
+        
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--terminal-cyan);
+            box-shadow: 0 0 10px var(--terminal-cyan);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-submit-btn {
+            background: var(--terminal-green);
+            color: var(--terminal-bg);
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-submit-btn:hover {
+            background: var(--terminal-cyan);
+            box-shadow: 0 0 15px var(--terminal-cyan);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix" class="matrix-background"></canvas>
+        
+    <div class="terminal-container">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <div class="terminal-button red"></div>
+                <div class="terminal-button yellow"></div>
+                <div class="terminal-button green"></div>
+            </div>
+            <div>user@hub:~</div>
+            <div style="width: 50px;"></div>
+        </div>
+        <div class="terminal-body" id="terminal-body">
+            <div id="typing-text" class="typing-text"></div>
+            
+            <div id="main-menu" class="menu-container hidden">
+                
+                <div class="accordion-item">
+                    <button class="accordion-trigger">
+                         <svg class="button-icon" viewBox="0 0 24 24"><path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-.001 5.5c-1.381 0-2.5 1.119-2.5 2.5s1.119 2.5 2.5 2.5 2.5-1.119 2.5-2.5-1.119-2.5-2.5-2.5zm1.5 8.5h-3v-1h3v1zm0-3h-3v-1h3v1zm0-3h-3v-1h3v1z"/></svg>
+                        <span>// QUEM_SOU_EU</span>
+                    </button>
+                    <div class="submenu">
+                       <p>Arquiteto de soluções digitais e estrategista de tecnologia. Minha missão é traduzir desafios complexos em sistemas eficientes e inovadores, construindo a ponte entre o presente e as possibilidades do futuro para empresas que buscam a vanguarda tecnológica.</p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button class="accordion-trigger">
+                        <svg class="button-icon" viewBox="0 0 24 24"><path d="M8.272 6.513c-.583-1.325-.23-2.924 1.096-3.507.039-.017.06-.039.098-.056 1.637-.923 3.655-.228 4.578 1.409.923 1.637.228 3.655-1.409 4.578-1.298.73-2.936.29-3.864-.897l-3.328 3.328c.607 1.05.679 2.404.225 3.53l-2.459 2.459c-1.562 1.562-4.095 1.562-5.657 0s-1.562-4.095 0-5.657l2.459-2.459c1.126-.453 2.48-.382 3.53.225l3.328-3.328c-1.187-.928-1.627-2.566-.897-3.864zm8.924 8.924c.928 1.187.489 2.825-.802 3.555-1.637.923-3.655-.228-4.578-1.409-.923-1.637-.228-3.655 1.409-4.578.026-.015.052-.028.079-.041.066-.035.132-.069.199-.101l3.328-3.328c-.607-1.05-.679-2.404-.225-3.53l2.459-2.459c1.562-1.562 4.095-1.562 5.657 0s1.562 4.095 0 5.657l-2.459 2.459c-1.126-.453-2.48-.382 3.53-.225l-3.328 3.328c1.187.928 1.627 2.566.897 3.864.001.001.001.001 0 .001z"/></svg>
+                        <span>// REDES SOCIAIS</span>
+                    </button>
+                    <div class="submenu">
+                        <a href="#" target="_blank" class="link-github" rel="noopener noreferrer">> GitHub</a>
+                        <a href="#" target="_blank" class="link-linkedin" rel="noopener noreferrer">> LinkedIn</a>
+                        <a href="#" target="_blank" class="link-instagram" rel="noopener noreferrer">> Instagram</a>
+                        <a href="#" target="_blank" class="link-youtube" rel="noopener noreferrer">> YouTube</a>
+                        <a href="#" target="_blank" class="link-threads" rel="noopener noreferrer">> Threads</a>
+                        <a href="#" target="_blank" class="link-facebook" rel="noopener noreferrer">> Facebook</a>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                     <button class="accordion-trigger">
+                        <svg class="button-icon" viewBox="0 0 24 24"><path d="M14 2h-10c-1.104 0-2 .896-2 2v16c0 1.104.896 2 2 2h12c1.104 0 2-.896 2-2v-14l-4-4zm-2 16h-6v-2h6v2zm0-4h-6v-2h6v2zm4-4h-10v-2h10v2z"/></svg>
+                        <span>// PORTFÓLIO DE SERVIÇOS</span>
+                    </button>
+                    <div class="submenu">
+                        <a href="#" target="_blank" class="submenu-item" rel="noopener noreferrer">> Desenvolvimento de Sites</a>
+                        <a href="#" target="_blank" class="submenu-item" rel="noopener noreferrer">> Criação de Chatbots IA</a>
+                        <a href="#" target="_blank" class="submenu-item" rel="noopener noreferrer">> Implementação Tecnológica</a>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                     <button class="accordion-trigger" id="contact-trigger">
+                        <svg class="button-icon" viewBox="0 0 24 24"><path d="M22 6.5v11c0 1.379-1.121 2.5-2.5 2.5h-15c-1.379 0-2.5-1.121-2.5-2.5v-11c0-1.379 1.121-2.5 2.5-2.5h15c1.379 0 2.5 1.121 2.5 2.5zm-2.5 1c-.139 0-.274.013-.404.039l-6.89 4.319-6.889-4.319c-.131-.026-.266-.039-.405-.039h-.022c-.06 0-.119.005-.178.013l7.489 4.694 7.488-4.694c-.059-.008-.118-.013-.178-.013h-.022zM3.5 8.139l6.549 4.102c.241.151.528.228.816.228s.575-.077.816-.228l6.549-4.102v9.361c0 .276-.224.5-.5.5h-15c-.276 0-.5-.224-.5-.5v-9.361z"/></svg>
+                        <span>// ENVIAR MENSAGEM</span>
+                    </button>
+                    <div class="submenu">
+                        <form id="contact-form" class="form-container" novalidate>
+                            <div class="form-group">
+                                <label for="name">> NOME_DE_USUARIO:</label>
+                                <input type="text" id="name" name="name" class="form-input" required autocomplete="name">
+                            </div>
+                            <div class="form-group">
+                                <label for="email">> CANAL_DE_RETORNO (EMAIL):</label>
+                                <input type="email" id="email" name="email" class="form-input" required autocomplete="email">
+                            </div>
+                            <div class="form-group">
+                                <label for="message">> MENSAGEM:</label>
+                                <textarea id="message" name="message" class="form-textarea" required></textarea>
+                            </div>
+                            <button type="submit" class="form-submit-btn">> TRANSMITIR</button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+
+             <div id="form-response" class="typing-text" style="margin-top:20px;"></div>
+
+        </div>
+    </div>
+    
+    <script>
+        'use strict';
+        (function() {
+            // --- MODIFICAÇÃO: Seção de áudio ---
+            let typingSynth, successSynth;
+            let isAudioReady = false;
+
+            // Função para inicializar o áudio após interação do usuário
+            function initAudio() {
+                if (window.Tone && !isAudioReady) {
+                    Tone.start().then(() => {
+                        // Synths são criados aqui para garantir que o AudioContext está ativo
+                        typingSynth = new Tone.MembraneSynth({
+                            pitchDecay: 0.01,
+                            octaves: 7,
+                            oscillator: { type: 'sine' },
+                            envelope: { attack: 0.001, decay: 0.2, sustain: 0.01, release: 0.4, attackCurve: 'exponential' }
+                        }).toDestination();
+                        typingSynth.volume.value = -25; // Volume baixo para ser sutil
+
+                        successSynth = new Tone.PolySynth(Tone.Synth, {
+                            oscillator: { type: 'fmsquare' },
+                            envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.2 }
+                        }).toDestination();
+                        successSynth.volume.value = -9;
+
+                        isAudioReady = true;
+                        console.log("Audio Context is ready.");
+                    }).catch(e => {
+                        console.error("Could not start audio context: ", e);
+                    });
+                }
+            }
+            // --- Fim da seção de áudio ---
+
+
+            const canvas = document.getElementById('matrix');
+            const ctx = canvas.getContext('2d');
+            const alphabet = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const fontSize = 16;
+            let columns, rainDrops, animationFrameId;
+
+            function initializeMatrix() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                columns = canvas.width / fontSize;
+                rainDrops = [];
+                for (let x = 0; x < columns; x++) {
+                    rainDrops[x] = 1;
+                }
+            }
+
+            function draw() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#0f0';
+                ctx.font = `${fontSize}px monospace`;
+                for (let i = 0; i < rainDrops.length; i++) {
+                    const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                    ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+                    if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        rainDrops[i] = 0;
+                    }
+                    rainDrops[i]++;
+                }
+            }
+            
+            function animateLoop() {
+                draw();
+                animationFrameId = requestAnimationFrame(animateLoop);
+            }
+
+            function typeCharacter(messages, terminalEl, onComplete) {
+                let messageIndex = 0;
+                let charIndex = 0;
+
+                function type() {
+                    if (messageIndex >= messages.length) {
+                        if (onComplete) onComplete();
+                        return;
+                    }
+                    const currentMessage = messages[messageIndex];
+                    if (charIndex < currentMessage.text.length) {
+                        const span = document.createElement('span');
+                        span.textContent = currentMessage.text.charAt(charIndex);
+                        if (currentMessage.style) span.style.cssText = currentMessage.style;
+                        terminalEl.appendChild(span);
+                        
+                        // --- MODIFICAÇÃO: Toca som de digitação ---
+                        if (isAudioReady && currentMessage.text.charAt(charIndex) !== ' ') {
+                           typingSynth.triggerAttack("C2");
+                        }
+                        
+                        charIndex++;
+                        setTimeout(type, currentMessage.delay);
+                    } else {
+                         // --- MODIFICAÇÃO: Verifica se a mensagem de sucesso acabou de ser digitada ---
+                        if (isAudioReady && currentMessage.text.includes("> ACESSO AUTORIZADO.")) {
+                            successSynth.triggerAttackRelease(['C5', 'G5'], '16n');
+                        }
+                        messageIndex++;
+                        charIndex = 0;
+                        setTimeout(type, 100);
+                    }
+                }
+                type();
+            }
+
+            function handleFormSubmit(e) {
+                e.preventDefault();
+                const contactTrigger = document.getElementById('contact-trigger');
+                const submenu = contactTrigger.nextElementSibling;
+                submenu.style.maxHeight = null;
+                contactTrigger.classList.remove('active');
+                
+                const formResponseEl = document.getElementById('form-response');
+                let countdown = 5;
+                formResponseEl.style.color = 'var(--terminal-green)';
+                formResponseEl.innerHTML = `> Transmissão iniciando em ${countdown}...`;
+
+                const countdownInterval = setInterval(() => {
+                    countdown--;
+                    formResponseEl.innerHTML = `> Transmissão iniciando em ${countdown}...`;
+                    if (countdown <= 0) {
+                        clearInterval(countdownInterval);
+                        formResponseEl.style.color = 'var(--terminal-cyan)';
+                        formResponseEl.innerHTML = `> [SUCESSO] Redirecionando para canal seguro...`;
+                        
+                        const name = document.getElementById('name').value;
+                        const email = document.getElementById('email').value;
+                        const message = document.getElementById('message').value;
+                        const whatsappNumber = "5582987125315";
+                        const fullMessage = `Olá, vim pelo seu site!\n\n*Nome:* ${name}\n*Email:* ${email}\n\n*Mensagem:*\n${message}`;
+                        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(fullMessage)}`;
+
+                        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                        e.target.reset();
+
+                        setTimeout(() => {
+                           formResponseEl.innerHTML = "";
+                        }, 5000);
+                    }
+                }, 1000);
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                initializeMatrix();
+                animateLoop();
+                
+                // --- MODIFICAÇÃO: Adiciona listener para iniciar áudio na primeira interação ---
+                document.body.addEventListener('click', initAudio, { once: true });
+                document.body.addEventListener('touchend', initAudio, { once: true });
+
+
+                const terminalText = document.getElementById('typing-text');
+                const mainMenu = document.getElementById('main-menu');
+
+                function getFormattedDateTime() {
+                    const now = new Date();
+                    const days = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+                    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                    const dayOfWeek = days[now.getDay()];
+                    const day = now.getDate();
+                    const month = months[now.getMonth()];
+                    const year = now.getFullYear();
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const minutes = now.getMinutes().toString().padStart(2, '0');
+                    return `> [${dayOfWeek}, ${day} de ${month} de ${year} // ${hours}:${minutes}]`;
+                }
+
+                const initialMessages = [
+                    { text: "Iniciando conexão segura...", delay: 30 },
+                    { text: "\n[OK] Chaves criptográficas verificadas.", delay: 30, style: "color: var(--terminal-cyan)" },
+                    { text: `\n\n${getFormattedDateTime()}`, delay: 30, style: "color: var(--terminal-purple)"},
+                    { text: "\n\n> ACESSO AUTORIZADO.", delay: 20, style: "color: var(--terminal-green); font-weight: bold" },
+                    { text: "\n\n", delay: 10 }
+                ];
+                
+                typeCharacter(initialMessages, terminalText, () => {
+                    mainMenu.classList.remove('hidden');
+                });
+
+                const accordions = document.querySelectorAll('.accordion-trigger');
+                accordions.forEach(accordion => {
+                    if (accordion.tagName === 'BUTTON') {
+                        accordion.addEventListener('click', function() {
+                            accordions.forEach(otherAccordion => {
+                                if (otherAccordion !== this && otherAccordion.classList.contains('active')) {
+                                    otherAccordion.classList.remove('active');
+                                    otherAccordion.nextElementSibling.style.maxHeight = null;
+                                }
+                            });
+                            this.classList.toggle('active');
+                            const submenu = this.nextElementSibling;
+                            submenu.style.maxHeight = submenu.style.maxHeight ? null : `${submenu.scrollHeight}px`;
+                        });
+                    }
+                });
+
+                document.getElementById('contact-form').addEventListener('submit', handleFormSubmit);
+            });
+            
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    initializeMatrix();
+                    animateLoop();
+                }, 150);
+            });
+
+        })();
+    </script>
+</body>
+</html>
