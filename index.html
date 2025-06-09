@@ -294,6 +294,49 @@
             background: var(--terminal-cyan);
             box-shadow: 0 0 15px var(--terminal-cyan);
         }
+
+        .terminal-footer {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--terminal-purple);
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--terminal-purple);
+            font-family: 'Share Tech Mono', monospace;
+            line-height: 1.6;
+            opacity: 0; /* Começa invisível */
+            transform: translateY(20px); /* Posição inicial para animação */
+            transition: opacity 0.5s ease, transform 0.5s ease; /* Animação suave */
+        }
+
+        .terminal-footer.visible {
+            opacity: 1; /* Torna visível */
+            transform: translateY(0); /* Move para a posição final */
+        }
+        
+        .terminal-footer p {
+            margin: 0;
+            padding: 0 10px;
+            text-shadow: 0 0 4px var(--terminal-glow);
+        }
+
+        .terminal-footer a {
+            color: var(--terminal-cyan);
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+
+        .terminal-footer a:hover {
+            color: #fff;
+            text-shadow: 0 0 8px var(--terminal-cyan);
+        }
+
+        .terminal-footer .cta-link {
+            color: var(--terminal-green);
+            text-transform: uppercase;
+        }
+        
     </style>
 </head>
 <body>
@@ -374,6 +417,14 @@
                         </form>
                     </div>
                 </div>
+
+                <div class="terminal-footer">
+                <p>
+                    Idealizado por <a href="https://www.instagram.com/arinelson.santos/" target="_blank" rel="noopener noreferrer">Arinelson Santos</a>.
+                    <br>
+                    Deseja construir a sua experiência única? <a href="https://wa.me/5582987125315?text=Ol%C3%A1%2C%20vim%20pelo%20seu%20site%20e%20gostaria%20de%20solicitar%20um%20or%C3%A7amento." target="_blank" class="cta-link" rel="noopener noreferrer">Entre na lista de espera e solicite um orçamento.</a>
+                </p>
+            </div>
 
             </div>
 
